@@ -1,0 +1,231 @@
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>员工信息</title>
+    @*Easyui需要引入的文件*@
+    <script type="text/javascript" src="~/Content/jquery-easyui-1.4.5/jquery.min.js"></script>
+    <script type="text/javascript" src="~/Content/jquery-easyui-1.4.5/jquery.easyui.min.js"></script>
+    <link href="~/Content/jquery-easyui-1.4.5/themes/default/easyui.css" rel="stylesheet" />
+    <link href="~/Content/jquery-easyui-1.4.5/themes/icon.css" rel="stylesheet" />
+    <script src="~/scripts/jquery.validate.min.js"></script>
+    <script type="text/javascript" src="~/Content/Site.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            //初始化datagrid
+            InitGrid();
+            InitDialog();
+            $('#btnReload').click(function () {
+                $("#grid").datagrid("reload");
+            });
+            //ajax提交修改表单
+            $('#ok').click(function () {
+                $('#errdiv').removeClass('dis');
+                $('#form').submit();
+            });
+            $('#cancel').click(function () {
+                $('#dd').dialog('close');
+            });
+            $('#add').click(function () {
+                $('#errdiv').attr('class', 'dis');
+                $('#form')[0].reset();
+                $('#EmpID').val("此字段自动生成。");
+                $('#dd').dialog('open');
+            });
+            $('#edit').click(function () {
+                $('#EmpID').attr('disabled', 'disabled');
+                getAjax("../Emp_Info/LoadForm",
+                        { id: $('#del_id').val() }, function (data) {
+                            var data = eval("(" + data + ")");
+                            SetWebControls(data);
+                        });
+                $('#key').val(1);
+                $('#dd').dialog('open');
+            });
+            $('#del').click(function () {
+                getAjax("../Emp_Info/Del", { id: $('#del_id').val() }, function (data) {
+                    if ($('#del_id').val() == null || $('#del_id').val() == "")
+                        return false;
+                    if (data) {
+                        $.messager.alert('提示', '操作成功!');
+                        $('#dd').dialog('close');
+                        $("#grid").datagrid("reload");
+                        return true;
+                    }
+                    else {
+                        $.messager.alert('提示', '操作失败!');
+                        return false;
+                    }
+                });
+            });
+        });
+
+        //实现对DataGird控件的绑定操作
+        function InitGrid() {
+            $('#grid').datagrid({
+                url: '../Emp_Info/LoadList',
+                fit: true,
+                nowrap: true,//单行显示
+                autoRowHeight: false,
+                singleSelect: true,
+                striped: false,     //斑马纹
+                collapsible: true,      //可折叠
+                pagination: true,
+                sortName: 'EmpID',    //根据某个字段给easyUI排序
+                sortOrder: 'asc',
+                pageSize: 20,
+                fitColumns: true,       //自适应列宽
+                rownumbers: true,
+                queryParams: ({
+                    query: $('#txtName').val()
+                }),  //异步查询的参数
+                columns: [[
+                     { title: '编号', field: 'EmpID', width: 15 },
+                     { title: '姓名', field: 'EmpName', width: 20 },
+                     { title: '性别', field: 'EmpSex', width: 15 },
+                     { title: '年龄', field: 'EmpAge', width: 15 },
+                     { title: '电话', field: 'EmpTel', width: 35 },
+                     { title: '地址', field: 'EmpAdress', width: 40 }
+                ]],
+                toolbar: '#tb',
+                onDblClickRow: function (rowIndex, rowData) {
+                    //$('#errdiv').attr('class', 'dis');
+                    getAjax("../Emp_Info/LoadForm",
+                        { id: rowData['EmpID'] }, function (data) {
+                            var data = eval("(" + data + ")");
+                            SetWebControls(data);
+                        });
+                    $('#dd').dialog('open');
+                },
+                onClickRow: function (index, row) {
+                    $('#del_id').val(row['EmpID']);
+                }
+            })
+            var p = $('#grid').datagrid('getPager');
+            $(p).pagination({
+                pageSize: 20,
+                pageList: [10, 12, 20, 40, 60, 100, 200],
+                beforePageText: '第',
+                afterPageText: '页   共 {pages} 页',
+                displayMsg: '当前显示 {from} - {to} 条记录   共 {total} 条记录',
+            });
+        };
+
+        //初始化对话框
+        function InitDialog() {
+            $('#dd').dialog({
+                title: '修改信息',
+                top: ($(window).height() - 230) * 0.5,      //居中
+                left: ($(window).width() - 300) * 0.5,
+                closed: true,
+                cache: false,
+                modal: true,
+                buttons: '#dlg-buttons'
+            });
+        }
+    </script>
+    <script>
+        //表单验证和提交
+        $(function () {
+            $('#form').validate({
+                rules: {
+                    EmpName: {
+                        required: true
+                    }
+                },
+                messages: {
+                    EmpName: "员工姓名不能为空！"
+                },
+                errorLabelContainer: '#errdiv>ul',
+                wrapper: 'li',
+                submitHandler: function (form) {
+                    var postData = GetWebControls("#form");
+                    getAjax("/Emp_Info/AcceptClick",
+                        postData, function (data) {
+                            if (data) {
+                                $.messager.alert('提示', '操作成功!');
+                                $('#dd').dialog('close');
+                                $("#grid").datagrid("reload");
+                                return true;
+                            }
+                            else {
+                                $.messager.alert('提示', '操作失败!');
+                                return false;
+                            }
+                        });
+                },
+                invalidHandler: function (form, validator) {  //不通过回调
+                    return false;
+                }
+            });
+        });
+    </script>
+    <style>
+        .dis {
+            display: none;
+        }
+
+        form input {
+            width: 200px;
+        }
+    </style>
+</head>
+<body style="margin:2px;padding:0">
+    <div>
+        <input id="del_id" type="hidden" name="del_id" value="" />
+        <div style="position:fixed;width:100%;height:100%">
+            <table id="grid"></table>
+        </div>
+        <div id="tb" style="padding:3px">
+            <a id="add" href="#" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-add'">新增</a>
+            <a id="edit" href="#" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-edit'">修改</a>
+            <a id="del" href="#" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-remove'">删除</a>
+            <a id="btnReload" href="#" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-reload'">刷新</a>
+            <br/>
+            <span>员工姓名</span>
+            <input id="txtName" style="border:1px solid #ccc">
+            <a href="#" class="easyui-linkbutton" plain="true" onclick="InitGrid()">查找</a>
+        </div>
+    </div>
+    <div id="dd" class="easyui-dialog">
+        <form id="form" name="form" method="post">
+            <table style="margin:8px">
+                <tr>
+                    <td>编号:</td>
+                    <td><input type="text" id="EmpID" name="EmpID" value="" disabled="disabled" /></td>
+                </tr>
+                <tr>
+                    <td>姓名:</td>
+                    <td><input type="text" id="EmpName" name="EmpName" value="" /></td>
+                </tr>
+                <tr>
+                    <td>性别:</td>
+                    <td><input type="text" id="EmpSex" name="EmpSex" value="" /></td>
+                </tr>
+                <tr>
+                    <td>年龄:</td>
+                    <td><input type="text" id="EmpAge" name="EmpAge" value="" /></td>
+                </tr>
+                <tr>
+                    <td>电话:</td>
+                    <td><input type="text" id="EmpTel" name="EmpTel" value="" /></td>
+                </tr>
+                <tr>
+                    <td>地址:</td>
+                    <td><input type="text" id="EmpAdress" name="EmpAdress" value="" /></td>
+                </tr>
+            </table>
+            <div class="errdiv" id="errdiv">
+                <ul></ul>
+            </div>
+            <div id="dlg-buttons">
+                <a id="ok" href="#" class="easyui-linkbutton" iconcls="icon-ok">确定</a>
+                <a id="cancel" href="#" class="easyui-linkbutton" iconcls="icon-cancel">取消</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
