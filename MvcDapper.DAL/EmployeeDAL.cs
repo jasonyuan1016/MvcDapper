@@ -36,6 +36,7 @@ namespace MvcDapper.DAL
             using (Conn)
             {
                 string query = "SELECT * FROM Employee";
+
                 return Conn.Query<Employee>(query).ToList();
             }
 
